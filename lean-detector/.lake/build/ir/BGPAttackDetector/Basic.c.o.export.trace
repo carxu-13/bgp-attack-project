@@ -1,0 +1,18 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs": "981f655a07f91682.o",
+ "log":
+ [{"message":
+   ".> /Users/joyz/.elan/toolchains/leanprover--lean4---v4.29.0/bin/clang -c -o /Users/joyz/work/school/netsec/project/.lake/build/ir/BGPAttackDetector/Basic.c.o.export /Users/joyz/work/school/netsec/project/.lake/build/ir/BGPAttackDetector/Basic.c -I /Users/joyz/.elan/toolchains/leanprover--lean4---v4.29.0/include -fstack-clash-protection -fdata-sections -ffunction-sections -fvisibility=hidden -Wno-unused-command-line-argument --sysroot /Users/joyz/.elan/toolchains/leanprover--lean4---v4.29.0 -nostdinc -isystem /Users/joyz/.elan/toolchains/leanprover--lean4---v4.29.0/include/clang -O3 -DNDEBUG -DLEAN_EXPORTING",
+   "level": "trace"}],
+ "inputs":
+ [["BGPAttackDetector.Basic:c",
+   [["/Users/joyz/work/school/netsec/project/.lake/build/ir/BGPAttackDetector/Basic.c",
+     "3ed4639718723000"],
+    ["Lean 4.29.0, commit 98dc76e3c0a9b856c9b98726b713fb04fab16740",
+     "60bb08ef22408c8a"]]],
+  ["Lean 4.29.0, commit 98dc76e3c0a9b856c9b98726b713fb04fab16740",
+   "60bb08ef22408c8a"],
+  ["traceArgs: #[-O3, -DNDEBUG, -DLEAN_EXPORTING]", "c1efb66122fb2b9a"],
+  ["arm64-apple-darwin24.6.0", "77c16133d139df5a"]],
+ "depHash": "3c10d680d7d1b9f8"}

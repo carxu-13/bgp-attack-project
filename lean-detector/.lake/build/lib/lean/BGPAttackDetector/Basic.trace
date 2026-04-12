@@ -1,0 +1,31 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["ccf620098ee48325.olean"],
+  "i": "8fc8c1c0ddb2754d.ilean",
+  "c": "3ed4639718723000.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/joyz/work/school/netsec/project/.lake/build/lib/lean /Users/joyz/.elan/toolchains/leanprover--lean4---v4.29.0/bin/lean /Users/joyz/work/school/netsec/project/BGPAttackDetector/Basic.lean -o /Users/joyz/work/school/netsec/project/.lake/build/lib/lean/BGPAttackDetector/Basic.olean -i /Users/joyz/work/school/netsec/project/.lake/build/lib/lean/BGPAttackDetector/Basic.ilean -c /Users/joyz/work/school/netsec/project/.lake/build/ir/BGPAttackDetector/Basic.c --setup /Users/joyz/work/school/netsec/project/.lake/build/ir/BGPAttackDetector/Basic.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["BGPAttackDetector.Basic:deps",
+   [["deps",
+     [["BGPAttackDetector/BGPAttackDetector:extraDep",
+       [["@BGPAttackDetector:extraDep", "00000000000006bb"]]],
+      ["imports", "00000000000006bb"]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.29.0, commit 98dc76e3c0a9b856c9b98726b713fb04fab16740",
+   "60bb08ef22408c8a"],
+  ["/Users/joyz/work/school/netsec/project/BGPAttackDetector/Basic.lean",
+   "fb8d37be36883ee0"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: BGPAttackDetector.Basic", "400f969a543aedd9"],
+  ["Package.id?: (some BGPAttackDetector)", "d17194c13606797d"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "8f05d8ff451eedb7"}

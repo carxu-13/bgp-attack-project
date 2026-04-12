@@ -1,0 +1,7 @@
+{"plugins": [],
+ "package": "BGPAttackDetector",
+ "options": {},
+ "name": "BGPAttackDetector.Basic",
+ "isModule": false,
+ "importArts": {},
+ "dynlibs": []}

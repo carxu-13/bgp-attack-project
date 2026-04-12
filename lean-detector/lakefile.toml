@@ -1,0 +1,14 @@
+name = "BGPAttackDetector"
+version = "0.1.0"
+defaultTargets = ["bgpattackdetector"]
+
+[[lean_lib]]
+name = "BGPAttackDetector"
+
+[[lean_exe]]
+name = "bgpattackdetector"
+root = "Main"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
