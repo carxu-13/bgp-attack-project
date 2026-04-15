@@ -14,9 +14,9 @@ Environment:
 
 Example:
   python runEval.py \
-    --base-detector ./pakistan_detector.py \
-    --attack-description ./mitm_description.txt \
-    --output ./generated_detector.py
+    --base-detector ./bgp_finalproject_hijackDetector.py \
+    --attack-description ./descriptions/description_1.txt \
+    --output ./output/generated_detector_1.py
 """
 
 from __future__ import annotations

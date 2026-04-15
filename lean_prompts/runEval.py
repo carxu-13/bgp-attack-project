@@ -4,19 +4,19 @@ runEval.py
 
 Minimal evaluation harness for:
 - prompting Mistral to extend an existing BGP detector
-- extracting Python code from the model output
+- extracting Lean 4 code from the model output
 - compiling it to check syntax validity
 - retrying with the compiler error if needed
-- emitting the final valid Python source
+- emitting the final valid Lean 4 source
 
 Environment:
   export MISTRAL_API_KEY=...
 
 Example:
   python runEval.py \
-    --base-detector ./pakistan_detector.py \
-    --attack-description ./mitm_description.txt \
-    --output ./generated_detector.py
+    --base-detector ./lean-detector/BGPAttackDetector.lean \
+    --attack-description ./descriptions/description_1.txt \
+    --output ./output/generated_detector_1.lean
 """
 
 from __future__ import annotations
