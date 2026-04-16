@@ -234,3 +234,47 @@ theorem UpdatesContainSubnet_sound (table updates : List Entry)
   exact heq
 
 #eval UpdatesContainSubnet bgpTable updates
+
+/-- `isOriginHijack t u` is `true` when update entry `u` announces a prefix that
+    overlaps with table entry `t`'s prefix **and** the origin AS differs.
+    Changing the origin AS while announcing an overlapping prefix is the hallmark
+    of a BGP origin-hijack attack. -/
+def isOriginHijack (tableEntry updateEntry : Entry) : Bool :=
+  (decide (tableEntry.pref.isSubnetOf updateEntry.pref) ||
+   decide (updateEntry.pref.isSubnetOf tableEntry.pref)) &&
+  decide (tableEntry.path.origin ≠ updateEntry.path.origin)
+
+/-- Pairwise origin-hijack detection across a BGP table and a list of updates.
+    The i-th element of the result is `true` iff the i-th (table, update) pair
+    is a suspected origin-hijack attack. -/
+def detectOriginHijacks (table updates : List Entry) : List Bool :=
+  List.zipWith isOriginHijack table updates
+
+-- Biconditional characterisation: the Bool check is equivalent to the two
+-- logical conditions holding simultaneously.
+theorem isOriginHijack_iff (e1 e2 : Entry) :
+    isOriginHijack e1 e2 = true ↔
+    (e1.pref.isSubnetOf e2.pref ∨ e2.pref.isSubnetOf e1.pref) ∧
+    e1.path.origin ≠ e2.path.origin := by
+  simp [isOriginHijack, Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq]
+
+/-- Soundness of `detectOriginHijacks`: every entry flagged as a hijack genuinely
+    has overlapping prefixes **and** a changed origin AS. -/
+theorem detectOriginHijacks_sound (table updates : List Entry)
+    (i : Nat) (hi : i < min table.length updates.length)
+    (h : (detectOriginHijacks table updates)[i]'(by
+        simp only [detectOriginHijacks, List.length_zipWith]; omega) = true) :
+    let x := table[i]'(by omega)
+    let y := updates[i]'(by omega)
+    (x.pref.isSubnetOf y.pref ∨ y.pref.isSubnetOf x.pref) ∧
+    x.path.origin ≠ y.path.origin := by
+  simp only
+  have hlen : (List.zipWith isOriginHijack table updates).length =
+      min table.length updates.length := List.length_zipWith
+  have hi' : i < (List.zipWith isOriginHijack table updates).length := hlen ▸ hi
+  have heq := h
+  simp only [detectOriginHijacks] at heq
+  rw [List.getElem_zipWith] at heq
+  rwa [isOriginHijack_iff] at heq
+
+#eval detectOriginHijacks bgpTable updates
