@@ -1,1 +1,2 @@
-./lean-detector/.lake
+lean-detector/.lake
+baseline/build
