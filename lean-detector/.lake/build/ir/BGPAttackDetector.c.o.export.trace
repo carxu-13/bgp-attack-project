@@ -1,0 +1,18 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs": "d705186ed644d176.o",
+ "log":
+ [{"message":
+   ".> /opt/lean4/bin/clang -c -o /home/joyz/work/school/netsec/project/lean-detector/.lake/build/ir/BGPAttackDetector.c.o.export /home/joyz/work/school/netsec/project/lean-detector/.lake/build/ir/BGPAttackDetector.c -I /opt/lean4/include -fstack-clash-protection -fdata-sections -ffunction-sections -fPIC -fvisibility=hidden -Wno-unused-command-line-argument --sysroot /opt/lean4 -nostdinc -isystem /opt/lean4/include/clang -O3 -DNDEBUG -DLEAN_EXPORTING",
+   "level": "trace"}],
+ "inputs":
+ [["BGPAttackDetector:c",
+   [["/home/joyz/work/school/netsec/project/lean-detector/.lake/build/ir/BGPAttackDetector.c",
+     "e91c504ec7ae1bc5"],
+    ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
+     "fa77a35a41db35c0"]]],
+  ["Lean 4.29.1, commit f72c35b3f637c8c6571d353742168ab66cc22c00",
+   "fa77a35a41db35c0"],
+  ["traceArgs: #[-O3, -DNDEBUG, -DLEAN_EXPORTING]", "c1efb66122fb2b9a"],
+  ["x86_64-unknown-linux-gnu", "53a0e8937c307c28"]],
+ "depHash": "08260539188d83d8"}

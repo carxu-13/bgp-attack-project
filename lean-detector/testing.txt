@@ -1,0 +1,189 @@
+[*] Loading baseline (RIB) entries from: ../data/pakistan_youtube_2008/text-ribs
+[*] Parsed 640513 baseline entries
+[*] Loading update entries from: ../data/pakistan_youtube_2008/text-updates
+[*] Parsed 147140 update entries
+[*] Suspicious subprefix announcements (≤8-hop parent search): 597
+[*] Unique (prefix, origin) attacks: 26
+
+  Hijacked prefix  : 207.188.226.0/24
+  Announced by     : AS19565
+  Covers baseline  : 207.188.192.0/18
+  Victim AS(es)    : AS7784
+  Unique peers     : 4
+  Announcements    : 9
+
+  Hijacked prefix  : 208.65.153.0/24
+  Announced by     : AS17557
+  Covers baseline  : 208.65.152.0/22
+  Victim AS(es)    : AS36561
+  Unique peers     : 11
+  Announcements    : 31
+
+  Hijacked prefix  : 41.220.231.0/24
+  Announced by     : AS33770
+  Covers baseline  : 41.220.228.0/22
+  Victim AS(es)    : AS23649
+  Unique peers     : 5
+  Announcements    : 19
+
+  Hijacked prefix  : 142.131.254.0/24
+  Announced by     : AS16413
+  Covers baseline  : 142.131.0.0/16
+  Victim AS(es)    : AS12188
+  Unique peers     : 9
+  Announcements    : 62
+
+  Hijacked prefix  : 80.253.31.0/24
+  Announced by     : AS34349
+  Covers baseline  : 80.253.16.0/20
+  Victim AS(es)    : AS39153
+  Unique peers     : 7
+  Announcements    : 16
+
+  Hijacked prefix  : 80.253.30.0/24
+  Announced by     : AS34349
+  Covers baseline  : 80.253.16.0/20
+  Victim AS(es)    : AS39153
+  Unique peers     : 7
+  Announcements    : 16
+
+  Hijacked prefix  : 192.24.248.0/24
+  Announced by     : AS18797
+  Covers baseline  : 192.24.0.0/16
+  Victim AS(es)    : AS10355
+  Unique peers     : 11
+  Announcements    : 69
+
+  Hijacked prefix  : 142.131.255.0/24
+  Announced by     : AS16413
+  Covers baseline  : 142.131.0.0/16
+  Victim AS(es)    : AS12188
+  Unique peers     : 9
+  Announcements    : 62
+
+  Hijacked prefix  : 41.220.230.0/24
+  Announced by     : AS33770
+  Covers baseline  : 41.220.228.0/22
+  Victim AS(es)    : AS23649
+  Unique peers     : 5
+  Announcements    : 19
+
+  Hijacked prefix  : 85.132.75.0/24
+  Announced by     : AS43637
+  Covers baseline  : 85.132.0.0/17
+  Victim AS(es)    : AS29049
+  Unique peers     : 3
+  Announcements    : 9
+
+  Hijacked prefix  : 69.22.144.0/24
+  Announced by     : AS27169
+  Covers baseline  : 69.22.128.0/18
+  Victim AS(es)    : AS4436
+  Unique peers     : 11
+  Announcements    : 27
+
+  Hijacked prefix  : 85.132.15.0/24
+  Announced by     : AS39397
+  Covers baseline  : 85.132.0.0/17
+  Victim AS(es)    : AS29049
+  Unique peers     : 3
+  Announcements    : 10
+
+  Hijacked prefix  : 199.117.166.0/24
+  Announced by     : AS25960
+  Covers baseline  : 199.117.0.0/16
+  Victim AS(es)    : AS209
+  Unique peers     : 3
+  Announcements    : 3
+
+  Hijacked prefix  : 62.140.251.0/24
+  Announced by     : AS29002
+  Covers baseline  : 62.140.224.0/19
+  Victim AS(es)    : AS28917
+  Unique peers     : 7
+  Announcements    : 30
+
+  Hijacked prefix  : 210.2.183.0/24
+  Announced by     : AS9940
+  Covers baseline  : 210.2.180.0/22
+  Victim AS(es)    : AS23966
+  Unique peers     : 5
+  Announcements    : 8
+
+  Hijacked prefix  : 85.132.51.0/24
+  Announced by     : AS15723
+  Covers baseline  : 85.132.0.0/17
+  Victim AS(es)    : AS29049
+  Unique peers     : 3
+  Announcements    : 12
+
+  Hijacked prefix  : 41.220.228.0/24
+  Announced by     : AS33770
+  Covers baseline  : 41.220.228.0/22
+  Victim AS(es)    : AS23649
+  Unique peers     : 5
+  Announcements    : 19
+
+  Hijacked prefix  : 62.140.231.0/24
+  Announced by     : AS29002
+  Covers baseline  : 62.140.228.0/22
+  Victim AS(es)    : AS28917
+  Unique peers     : 7
+  Announcements    : 30
+
+  Hijacked prefix  : 192.24.249.0/24
+  Announced by     : AS18797
+  Covers baseline  : 192.24.0.0/16
+  Victim AS(es)    : AS10355
+  Unique peers     : 11
+  Announcements    : 69
+
+  Hijacked prefix  : 85.132.49.0/24
+  Announced by     : AS15723
+  Covers baseline  : 85.132.0.0/17
+  Victim AS(es)    : AS29049
+  Unique peers     : 3
+  Announcements    : 12
+
+  Hijacked prefix  : 69.22.144.0/24
+  Announced by     : AS21792
+  Covers baseline  : 69.22.128.0/18
+  Victim AS(es)    : AS4436
+  Unique peers     : 11
+  Announcements    : 15
+
+  Hijacked prefix  : 203.215.36.0/24
+  Announced by     : AS17557
+  Covers baseline  : 203.215.32.0/20
+  Victim AS(es)    : AS38056
+  Unique peers     : 6
+  Announcements    : 11
+
+  Hijacked prefix  : 203.185.129.0/24
+  Announced by     : AS38296
+  Covers baseline  : 203.185.128.0/22
+  Victim AS(es)    : AS9835
+  Unique peers     : 3
+  Announcements    : 8
+
+  Hijacked prefix  : 85.132.7.0/24
+  Announced by     : AS39397
+  Covers baseline  : 85.132.0.0/17
+  Victim AS(es)    : AS29049
+  Unique peers     : 3
+  Announcements    : 10
+
+  Hijacked prefix  : 209.190.203.0/24
+  Announced by     : AS7764
+  Covers baseline  : 209.190.192.0/18
+  Victim AS(es)    : AS7784
+  Unique peers     : 4
+  Announcements    : 10
+
+  Hijacked prefix  : 203.185.132.0/24
+  Announced by     : AS38296
+  Covers baseline  : 203.185.132.0/22
+  Victim AS(es)    : AS9835
+  Unique peers     : 4
+  Announcements    : 11
+

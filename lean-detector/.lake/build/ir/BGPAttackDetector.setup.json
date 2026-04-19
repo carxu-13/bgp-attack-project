@@ -5,5 +5,5 @@
  "isModule": false,
  "importArts":
  {"BGPAttackDetector.Basic":
-  ["/Users/joyz/work/school/netsec/project/.lake/build/lib/lean/BGPAttackDetector/Basic.olean"]},
+  ["/home/joyz/work/school/netsec/project/lean-detector/.lake/build/lib/lean/BGPAttackDetector/Basic.olean"]},
  "dynlibs": []}

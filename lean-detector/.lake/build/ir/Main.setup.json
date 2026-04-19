@@ -1,0 +1,11 @@
+{"plugins": [],
+ "package": "BGPAttackDetector",
+ "options": {},
+ "name": "Main",
+ "isModule": false,
+ "importArts":
+ {"BGPAttackDetector.Basic":
+  ["/home/joyz/work/school/netsec/project/lean-detector/.lake/build/lib/lean/BGPAttackDetector/Basic.olean"],
+  "BGPAttackDetector":
+  ["/home/joyz/work/school/netsec/project/lean-detector/.lake/build/lib/lean/BGPAttackDetector.olean"]},
+ "dynlibs": []}
