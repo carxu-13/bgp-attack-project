@@ -187,6 +187,66 @@ def compile_python(code: str, filename: str = "<generated_detector>") -> Tuple[b
         return False, f"{type(e).__name__}: {e}"
 
 
+def build_refine_system_prompt() -> str:
+    return textwrap.dedent(
+        """
+        You rewrite Python BGP detector code to align with formal Lean 4 type definitions.
+
+        Rules:
+        - Output Python source code only.
+        - Do not include markdown fences unless explicitly asked.
+        - Do not include explanations before or after the code.
+        - Mirror the data layout of the Lean types exactly: field names, field order, and semantics must correspond.
+        - Keep all original detector logic; only restructure types and data access patterns.
+        - Generate a complete Python file that can be compiled as-is.
+        """
+    ).strip()
+
+
+def build_refine_user_prompt(draft_code: str, lean_types: str, attack_description: str, compiler_error: Optional[str] = None) -> str:
+    prompt = f"""
+You are given an initial Python BGP detector implementation and a set of formal Lean 4 type definitions
+that model its data structures. Your task is to rewrite the Python so that its types and data layout
+match the Lean definitions as closely as Python allows.
+
+Original Python draft:
+<<<PYTHON_DRAFT
+{draft_code}
+PYTHON_DRAFT>>>
+
+Lean 4 type definitions to mirror:
+<<<LEAN_TYPES
+{lean_types}
+LEAN_TYPES>>>
+
+Attack behavior description:
+<<<ATTACK_DESCRIPTION
+{attack_description}
+ATTACK_DESCRIPTION>>>
+
+Task:
+- Replace Python classes/dicts with dataclasses or namedtuples whose fields match the Lean structures.
+- Preserve all detection logic from the original draft.
+- Keep imports minimal.
+- Output only valid Python source code with no commentary.
+""".strip()
+
+    if compiler_error:
+        prompt += f"""
+
+The previous attempt failed to compile.
+
+Compiler error:
+<<<COMPILER_ERROR
+{compiler_error}
+COMPILER_ERROR>>>
+
+Please correct the code and output a full replacement Python file.
+""".rstrip()
+
+    return prompt
+
+
 def ast_sanity_check(code: str) -> Tuple[bool, Optional[str]]:
     """
     Optional extra check. This still does not execute code.
@@ -201,21 +261,36 @@ def ast_sanity_check(code: str) -> Tuple[bool, Optional[str]]:
 def generate_valid_code(
     client: Mistral,
     model: str,
-    base_detector_code: str,
     attack_description: str,
     max_retries: int,
+    mode: str = "draft",
+    base_detector_code: str = "",
+    lean_types: str = "",
+    draft_code: str = "",
 ) -> GenerationResult:
-    system_prompt = build_system_prompt()
+    if mode == "draft":
+        system_prompt = build_system_prompt()
+    else:
+        system_prompt = build_refine_system_prompt()
+
     compiler_error = None
     last_raw = ""
     last_code = ""
 
     for attempt in range(1, max_retries + 2):
-        user_prompt = build_user_prompt(
-            base_detector_code=base_detector_code,
-            attack_description=attack_description,
-            compiler_error=compiler_error,
-        )
+        if mode == "draft":
+            user_prompt = build_user_prompt(
+                base_detector_code=base_detector_code,
+                attack_description=attack_description,
+                compiler_error=compiler_error,
+            )
+        else:
+            user_prompt = build_refine_user_prompt(
+                draft_code=draft_code,
+                lean_types=lean_types,
+                attack_description=attack_description,
+                compiler_error=compiler_error,
+            )
 
         raw = call_mistral(client, model, system_prompt, user_prompt)
         code = normalize_code(extract_code(raw))
@@ -248,8 +323,12 @@ def generate_valid_code(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate and compile-check Python detector code with Mistral.")
-    parser.add_argument("--base-detector", required=True, help="Path to existing detector Python file.")
+    parser = argparse.ArgumentParser(description="Python detector generation layer.")
+    parser.add_argument("--mode", choices=["draft", "refine"], default="draft",
+                        help="'draft': generate initial Python; 'refine': realign Python to Lean types.")
+    parser.add_argument("--base-detector", default=None, help="Path to existing detector Python file (used for draft mode).")
+    parser.add_argument("--draft", default=None, help="Path to Python draft file (required for refine mode).")
+    parser.add_argument("--lean-types", default=None, help="Path to Lean 4 types file (required for refine mode).")
     parser.add_argument("--attack-description", required=True, help="Path to text file describing target attack behavior.")
     parser.add_argument("--output", required=True, help="Path to save final generated Python.")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Mistral model name.")
@@ -261,22 +340,31 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
 
+    if args.mode == "refine" and (not args.draft or not args.lean_types):
+        print("--draft and --lean-types are required when --mode refine is used.", file=sys.stderr)
+        return 2
+
     api_key = os.environ.get("MISTRAL_API_KEY")
     if not api_key:
         print("Missing MISTRAL_API_KEY environment variable.", file=sys.stderr)
         return 2
 
-    base_detector_code = read_text(args.base_detector)
     attack_description = read_text(args.attack_description)
+    base_detector_code = read_text(args.base_detector) if args.base_detector else ""
+    draft_code = read_text(args.draft) if args.draft else ""
+    lean_types = read_text(args.lean_types) if args.lean_types else ""
 
     client = Mistral(api_key=api_key, timeout_ms=120_000)
 
     result = generate_valid_code(
         client=client,
         model=args.model,
-        base_detector_code=base_detector_code,
         attack_description=attack_description,
         max_retries=args.max_retries,
+        mode=args.mode,
+        base_detector_code=base_detector_code,
+        lean_types=lean_types,
+        draft_code=draft_code,
     )
 
     output_path = Path(args.output)
