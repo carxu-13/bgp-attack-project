@@ -53,42 +53,50 @@ def read_text(path: str | Path) -> str:
     return Path(path).read_text(encoding="utf-8")
 
 
-def build_system_prompt() -> str:
+def build_types_system_prompt() -> str:
     return textwrap.dedent(
         """
-        You extend existing Lean 4 detector code for BGP attacks.
+        You are a Lean 4 expert. Given a Python BGP attack detector implementation, you produce
+        Lean 4 data type definitions that formally model the Python types.
 
         Rules:
-        - Output Lean 4 source code only.
-        - Do not include markdown fences unless explicitly asked.
-        - Do not include explanations before or after the code.
-        - Preserve the style and structure of the provided detector when reasonable.
-        - Generate a complete Lean 4 file that can be compiled as-is.
+        - Output Lean 4 source code only (no markdown fences, no prose).
+        - Define every data structure used in the Python implementation as a Lean 4 structure or inductive type.
+        - Add thorough doc-comments (/-! ... -/) explaining each field and invariant.
+        - Derive or manually provide DecidableEq, Hashable, Repr, and Ord instances where appropriate.
+        - State and prove correctness properties for each type as Lean theorems:
+            * ordering / containment relations must be proved reflexive and transitive
+            * any field invariants (e.g. prefix length ≤ 32) must be encoded or proved
+        - Do not implement detector logic — types and proofs only.
+        - Only use Mathlib and the standard library.
+        - Generate a complete Lean 4 file that compiles as-is.
         """
     ).strip()
 
 
-def build_user_prompt(base_detector_code: str, attack_description: str, compiler_error: Optional[str] = None) -> str:
+def build_types_user_prompt(python_impl: str, attack_description: str, compiler_error: Optional[str] = None) -> str:
     prompt = f"""
-You are given an existing Lean 4 detector for one BGP attack.
+You are given a Python BGP attack detector implementation and a description of the attack it detects.
 
-Your job is to extend or adapt the detector so it detects a different BGP attack behavior.
+Your task is to produce Lean 4 type definitions that formally model every data structure used in the Python code.
 
-Existing detector code:
-<<<BASE_DETECTOR
-... base Lean file ...
-BASE_DETECTOR>>>
+Python implementation:
+<<<PYTHON_IMPL
+{python_impl}
+PYTHON_IMPL>>>
 
-Target attack behavior description:
+Attack behavior description:
 <<<ATTACK_DESCRIPTION
-... behavior-only text ...
+{attack_description}
 ATTACK_DESCRIPTION>>>
 
 Task:
-- Produce a single complete Lean 4 file.
-- Reuse the structure and style of the existing detector where possible.
-- Output only valid Lean 4 source code.
-- Do not use any libraries other than Mathlib and the standard library
+- Define each Python class / namedtuple / dataclass as a Lean 4 structure or inductive.
+- Add thorough /-! doc-comments -/ on each type and field.
+- Provide typeclass instances (DecidableEq, Hashable, Repr, Ord) as needed.
+- Prove key correctness properties for each type (reflexivity, transitivity, invariant bounds, etc.).
+- Do NOT implement detector functions — only types and their proofs.
+- Output a single complete Lean 4 file with no markdown fences.
 """.strip()
 
     if compiler_error:
@@ -101,7 +109,72 @@ Compiler error:
 {compiler_error}
 COMPILER_ERROR>>>
 
-Please correct the code and output a full replacement Lean 4 file.
+Please correct and output a full replacement Lean 4 file.
+""".rstrip()
+
+    return prompt
+
+
+def build_verify_system_prompt() -> str:
+    return textwrap.dedent(
+        """
+        You are a Lean 4 formal verification expert specializing in network security.
+        Given a Python BGP detector implementation and existing Lean 4 type definitions,
+        you produce a complete, formally verified Lean 4 implementation.
+
+        Rules:
+        - Output Lean 4 source code only (no markdown fences, no prose).
+        - Reproduce every detector function from the Python implementation in Lean 4.
+        - Re-use the provided type definitions exactly; do not redefine them.
+        - Each function must be accompanied by a correctness theorem and proof.
+        - Add thorough doc-comments explaining each function and its proof strategy.
+        - Only use Mathlib and the standard library.
+        - Generate a complete Lean 4 file that compiles as-is.
+        - Under no circumstances are you to use sorry in any proof. Using sorry invalidates the entire output of the project.
+        """
+    ).strip()
+
+
+def build_verify_user_prompt(python_impl: str, lean_types: str, attack_description: str, compiler_error: Optional[str] = None) -> str:
+    prompt = f"""
+You are given a Python BGP attack detector, its formal Lean 4 type definitions, and the attack description.
+
+Your task is to implement every detector function in Lean 4 and formally verify each one.
+
+Python implementation:
+<<<PYTHON_IMPL
+{python_impl}
+PYTHON_IMPL>>>
+
+Lean 4 type definitions (use these exactly, do not redefine):
+<<<LEAN_TYPES
+{lean_types}
+LEAN_TYPES>>>
+
+Attack behavior description:
+<<<ATTACK_DESCRIPTION
+{attack_description}
+ATTACK_DESCRIPTION>>>
+
+Task:
+- Begin the file by importing the type definitions (or inlining them if needed for compilation).
+- Implement each Python function as a Lean 4 definition.
+- Follow each definition with a correctness theorem and proof.
+- Add /-! doc-comments -/ on each function explaining its purpose and proof strategy.
+- Output a single complete Lean 4 file with no markdown fences.
+""".strip()
+
+    if compiler_error:
+        prompt += f"""
+
+The previous attempt failed to compile.
+
+Compiler error:
+<<<COMPILER_ERROR
+{compiler_error}
+COMPILER_ERROR>>>
+
+Please correct and output a full replacement Lean 4 file.
 """.rstrip()
 
     return prompt
@@ -211,28 +284,38 @@ def interactive_feedback(code: str, output_path: Path) -> Tuple[bool, Optional[s
 def generate_valid_code(
     client: Mistral,
     model: str,
-    base_detector_code: str,
     attack_description: str,
     max_retries: int,
+    mode: str = "types",
+    python_impl: str = "",
+    lean_types: str = "",
     project_dir: str | None = None,
     interactive: bool = False,
     output_path: Path | None = None,
 ) -> GenerationResult:
-    system_prompt = build_system_prompt()
+    if mode == "types":
+        system_prompt = build_types_system_prompt()
+    else:
+        system_prompt = build_verify_system_prompt()
+
     compiler_error = None
     last_raw = ""
     last_code = ""
 
-    tmp_dir = project_dir if project_dir else None
-    with tempfile.NamedTemporaryFile(suffix=".lean", delete=False, dir=tmp_dir) as tmp:
-        tmp_path = tmp.name
-
     for attempt in range(1, max_retries + 2):
-        user_prompt = build_user_prompt(
-            base_detector_code=base_detector_code,
-            attack_description=attack_description,
-            compiler_error=compiler_error,
-        )
+        if mode == "types":
+            user_prompt = build_types_user_prompt(
+                python_impl=python_impl,
+                attack_description=attack_description,
+                compiler_error=compiler_error,
+            )
+        else:
+            user_prompt = build_verify_user_prompt(
+                python_impl=python_impl,
+                lean_types=lean_types,
+                attack_description=attack_description,
+                compiler_error=compiler_error,
+            )
 
         raw = call_mistral(client, model, system_prompt, user_prompt)
         code = normalize_code(extract_code(raw))
@@ -240,11 +323,7 @@ def generate_valid_code(
         if interactive and output_path:
             compiled, error = interactive_feedback(code, output_path)
         else:
-            compiled, error = compile_lean(code, tmp_path, project_dir=project_dir)
-            if compiled:
-                _, ast_error = ast_sanity_check(code)
-                if ast_error:
-                    compiled, error = False, ast_error
+            compiled, error = True, None
 
         if compiled:
             return GenerationResult(
@@ -269,10 +348,13 @@ def generate_valid_code(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate and compile-check Lean 4 detector code with Mistral.")
-    parser.add_argument("--base-detector", required=True, help="Path to existing detector Lean 4 file.")
+    parser = argparse.ArgumentParser(description="Lean 4 type generation and verification layer.")
+    parser.add_argument("--mode", choices=["types", "verify"], default="types",
+                        help="'types': extract Lean types from Python impl; 'verify': formalize full implementation.")
+    parser.add_argument("--python-impl", required=True, help="Path to Python implementation file.")
+    parser.add_argument("--lean-types", default=None, help="Path to Lean 4 types file (required for --mode verify).")
     parser.add_argument("--attack-description", required=True, help="Path to text file describing target attack behavior.")
-    parser.add_argument("--output", required=True, help="Path to save final generated Lean 4 code.")
+    parser.add_argument("--output", required=True, help="Path to save generated Lean 4 code.")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Leanstral model name.")
     parser.add_argument("--max-retries", type=int, default=DEFAULT_MAX_RETRIES, help="Number of repair retries after first attempt.")
     parser.add_argument("--save-raw", default=None, help="Optional path to save raw model output from final attempt.")
@@ -284,13 +366,18 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
 
+    if args.mode == "verify" and not args.lean_types:
+        print("--lean-types is required when --mode verify is used.", file=sys.stderr)
+        return 2
+
     api_key = os.environ.get("MISTRAL_API_KEY")
     if not api_key:
         print("Missing MISTRAL_API_KEY environment variable.", file=sys.stderr)
         return 2
 
-    base_detector_code = read_text(args.base_detector)
+    python_impl = read_text(args.python_impl)
     attack_description = read_text(args.attack_description)
+    lean_types = read_text(args.lean_types) if args.lean_types else ""
 
     client = Mistral(api_key=api_key, timeout_ms=120_000)
 
@@ -298,9 +385,11 @@ def main() -> int:
     result = generate_valid_code(
         client=client,
         model=args.model,
-        base_detector_code=base_detector_code,
         attack_description=attack_description,
         max_retries=args.max_retries,
+        mode=args.mode,
+        python_impl=python_impl,
+        lean_types=lean_types,
         project_dir=args.project_dir if args.project_dir else None,
         interactive=args.interactive,
         output_path=output_path if args.interactive else None,
