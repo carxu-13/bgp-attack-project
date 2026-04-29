@@ -1,2 +1,4 @@
 ./lean-detector/.lake
+./lean-detector/.generated
 data/
+outputs/

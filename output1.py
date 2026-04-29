@@ -1,22 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # BGP Hijack Detector
-# 
-# This notebook will find .b2z files taken from the Route Views data respoistory and detect and flag suspicious/ hijacked routes. This uses the *longest matching prefix* method.
-
-# In[45]:
-
-
 import argparse
 import ipaddress
 from pathlib import Path
 import pandas as pd
 from mrtparse import Reader
-
-
-# In[68]:
-
 
 def extract_as_path(path):
     as_path=[]
@@ -29,10 +18,6 @@ def extract_as_path(path):
             if seg in {"AS_SEQUENCE","AS_SET"}:
                 as_path.extend(str(x) for x in segment["value"])
     return as_path
-
-
-# In[69]:
-
 
 def parse_bgp_file(file_path):
     rows=[]
@@ -95,11 +80,7 @@ def parse_bgp_file(file_path):
                 })
     return rows
 
-
-# In[72]:
-
-
-def detect_hijacks(data):
+def detect_interception(data):
     root = Path(data)
     collectors = [d for d in [root / "route-views", root / "ripe-ris"] if d.exists()]
     rib_files = []
@@ -113,7 +94,7 @@ def detect_hijacks(data):
             elif "update" in name:
                 update_files.append(f)
 
-    baseline_exact={}
+    baseline_paths={}
     baseline_mode=None
 
     if rib_files:
@@ -125,20 +106,16 @@ def detect_hijacks(data):
         baseline_files=[sorted(v)[0] for v in earliest_rib_per_collector.values()]
         for f in baseline_files:
             for rec in parse_bgp_file(f):
-                baseline_exact.setdefault(rec["prefix"], set()).add(rec["origin_as"])
+                baseline_paths.setdefault(rec["prefix"], {}).setdefault(rec["origin_as"], set()).add(tuple(rec["as_path"]))
     else:
         baseline_mode ="FIRST_UPDATE"
         for f in sorted(update_files):
             for rec in parse_bgp_file(f):
                 if rec["action"]!="A" or not rec["origin_as"]:
                     continue
-                if rec["prefix"] not in baseline_exact:
-                    baseline_exact[rec["prefix"]]={rec["origin_as"]}
-
-    baseline_networks={}
-    for prefix, origins in baseline_exact.items():
-        net=ipaddress.ip_network(prefix)
-        baseline_networks[str(net)]={"net":net,"origins":set(origins)}
+                if rec["prefix"] not in baseline_paths:
+                    baseline_paths[rec["prefix"]]={rec["origin_as"]: set()}
+                baseline_paths[rec["prefix"]][rec["origin_as"]].add(tuple(rec["as_path"]))
 
     suspicious_rows=[]
     for f in sorted(update_files):
@@ -147,49 +124,66 @@ def detect_hijacks(data):
                 continue
             prefix=rec["prefix"]
             origin=rec["origin_as"]
+            as_path=rec["as_path"]
+
+            if prefix not in baseline_paths:
+                continue
+
+            historical_paths=baseline_paths[prefix].get(origin, set())
+            if not historical_paths:
+                continue
+
+            if tuple(as_path) in historical_paths:
+                continue
+
             net=ipaddress.ip_network(prefix)
             if net.prefixlen < 24:
                 continue
-            covered_by_prefix=None
-            victim_origins=[]
-            flag=False
 
-            
-            parent_match=None
-            for plen in range(net.prefixlen - 1, max(net.prefixlen - 8, 0), -1):
-                parent=net.supernet(new_prefix=plen)
-                parent_str=str(parent)
-                if parent_str in baseline_networks:
-                    parent_match= baseline_networks[parent_str]
+            new_path_set=set()
+            for hp in historical_paths:
+                new_path_set.add(hp)
+
+            inserted_asns=[]
+            for hp in historical_paths:
+                if len(hp) >= len(as_path):
+                    continue
+                if as_path[-len(hp):] != list(hp):
+                    continue
+                for i in range(len(as_path) - len(hp)):
+                    inserted_asns.append(as_path[i])
+
+            if not inserted_asns:
+                continue
+
+            destination_present=False
+            for hp in historical_paths:
+                if hp[-1] in as_path[-3:]:
+                    destination_present=True
                     break
 
-            if parent_match is not None:
-                parent_origins= parent_match["origins"]
-                if origin not in parent_origins:
-                    flag=True
-                    covered_by_prefix=str(parent_match["net"])
-                    victim_origins= sorted(parent_origins)
+            if not destination_present:
+                continue
 
-            if flag:
-                suspicious_rows.append({
-                    "collector":rec["collector"],
-                    "source_file":rec["source_file"],
-                    "timestamp":rec["timestamp"],
-                    "timestamp_unix":rec["timestamp_unix"],
-                    "record_type":rec["record_type"],
-                    "action":rec["action"],
-                    "peer_as":rec["peer_as"],
-                    "peer_ip":rec["peer_ip"],
-                    "prefix":prefix,
-                    "as_path":rec["as_path"],
-                    "origin_as":origin,
-                    "covered_by_prefix":covered_by_prefix,
-                    "victim_origin_asns":victim_origins,
-                    "prefix_len":net.prefixlen,
-                    "first_ip": str(net.network_address),
-                    "last_ip":str(net.broadcast_address),
-                    "num_ips":net.num_addresses,
-                })
+            suspicious_rows.append({
+                "collector":rec["collector"],
+                "source_file":rec["source_file"],
+                "timestamp":rec["timestamp"],
+                "timestamp_unix":rec["timestamp_unix"],
+                "record_type":rec["record_type"],
+                "action":rec["action"],
+                "peer_as":rec["peer_as"],
+                "peer_ip":rec["peer_ip"],
+                "prefix":prefix,
+                "as_path":as_path,
+                "origin_as":origin,
+                "historical_as_paths":list(historical_paths),
+                "inserted_asns":inserted_asns,
+                "prefix_len":net.prefixlen,
+                "first_ip": str(net.network_address),
+                "last_ip":str(net.broadcast_address),
+                "num_ips":net.num_addresses,
+            })
 
     suspicious_df=pd.DataFrame(suspicious_rows)
     if not suspicious_df.empty:
@@ -205,7 +199,7 @@ def detect_hijacks(data):
     else:
         prefix_summary=(
             suspicious_df.groupby(
-                ["prefix", "covered_by_prefix", "first_ip", "last_ip", "num_ips"],
+                ["prefix", "first_ip", "last_ip", "num_ips"],
                 as_index=False
             )
             .agg(
@@ -213,7 +207,8 @@ def detect_hijacks(data):
                 last_seen=("timestamp", "max"),
                 suspicious_announcements=("prefix", "size"),
                 suspected_origins=("origin_as", lambda s: sorted(set(s))),
-                victim_origin_asns=("victim_origin_asns", lambda s: sorted(set(tuple(x) for x in s))),
+                inserted_asns=("inserted_asns", lambda s: sorted(set(x for sub in s for x in sub))),
+                historical_as_paths=("historical_as_paths", lambda s: sorted(set(tuple(x) for sub in s for x in sub))),
                 collectors=("collector", lambda s: sorted(set(s))),
 
             )
@@ -224,21 +219,16 @@ def detect_hijacks(data):
     count= len(suspicious_df)
     return count, prefix_summary, suspicious_df
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="BGP hijack detector.")
+    parser = argparse.ArgumentParser(description="BGP interception detector.")
     parser.add_argument("data_dir", help="Path to data directory (e.g. ./data/pakistan_youtube_2008)")
     args = parser.parse_args()
 
-    count, prefix_summary, suspicious_df = detect_hijacks(args.data_dir)
+    count, prefix_summary, suspicious_df = detect_interception(args.data_dir)
 
-    print("Project Detection:")
+    print("Interception Detection:")
     print("Suspicious announcement count:", count)
-    print("\nPossible hijacked prefixes/subprefixes")
+    print("\nPossible intercepted prefixes")
     print(prefix_summary.head(25).to_string())
     print("\nSuspicious announcements")
     print(suspicious_df.head(25).to_string())
-
-
-
-
