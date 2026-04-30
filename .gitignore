@@ -1,2 +1,6 @@
 ./lean-detector/.lake
+./lean-detector_aristotle/.lake
+./outputs_aristotle/.lake
+./lean-detector/.generated
 data/
+outputs/

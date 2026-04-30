@@ -8,6 +8,7 @@
 # In[7]:
 
 
+import argparse
 import ipaddress
 import json
 from pathlib import Path
@@ -36,12 +37,23 @@ def detect_hijacks(data):
     txt_dir = root / "txt_files"
     rib_files = []
     update_files = []
+<<<<<<< HEAD
     for f in sorted(txt_dir.rglob("*.txt")):
         name=f.name.lower()
         if "rib" in name or "bview" in name:
             rib_files.append(f)
         elif "update" in name:
             update_files.append(f)
+=======
+
+    for collector in collectors:
+        for f in sorted(collector.rglob("*.mrt")):
+            name=f.name.lower()
+            if "rib" in name or "bview" in name:
+                rib_files.append(f)
+            elif "update" in name:
+                update_files.append(f)
+>>>>>>> aa91676 (attempted to resolve updating issue)
 
     baseline_exact={}
     baseline_mode=None
@@ -154,8 +166,12 @@ def detect_hijacks(data):
     return count, prefix_summary, suspicious_df
 
 
-# ## Run on data
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="BGP hijack detector.")
+    parser.add_argument("data_dir", help="Path to data directory (e.g. ./data/pakistan_youtube_2008)")
+    args = parser.parse_args()
 
+<<<<<<< HEAD
 # In[10]:
 
 
@@ -182,6 +198,16 @@ suspicious_df.head(25)
 
 
 # In[ ]:
+=======
+    count, prefix_summary, suspicious_df = detect_hijacks(args.data_dir)
+
+    print("Project Detection:")
+    print("Suspicious announcement count:", count)
+    print("\nPossible hijacked prefixes/subprefixes")
+    print(prefix_summary.head(25).to_string())
+    print("\nSuspicious announcements")
+    print(suspicious_df.head(25).to_string())
+>>>>>>> aa91676 (attempted to resolve updating issue)
 
 
 
