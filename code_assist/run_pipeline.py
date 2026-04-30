@@ -45,7 +45,8 @@ def read_text(path: str | Path) -> str:
 
 
 def write_text(path: str | Path, content: str) -> None:
-    Path(path).write_text(content, encoding="utf-8")
+    with open(path, "w") as f:
+        f.write(content)
 
 
 def banner(title: str) -> None:

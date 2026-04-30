@@ -10,3 +10,5 @@
 # Nice-to-haves
 
 - Create modified instances of attacks if we have time
+
+3.6 gb for aristotle version / 15 for pipeline 3 version
