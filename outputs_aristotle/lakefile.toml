@@ -1,0 +1,15 @@
+name = "RequestProject"
+defaultTargets = ["bgpinterceptiondetector"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "master"
+
+[[lean_lib]]
+name = "BGPAttackDetector"
+globs = ["BGPAttackDetector"]
+
+[[lean_exe]]
+name = "bgpinterceptiondetector"
+root = "detector_1"
