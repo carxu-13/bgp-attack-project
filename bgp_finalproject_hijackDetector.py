@@ -5,113 +5,46 @@
 # 
 # This notebook will find .b2z files taken from the Route Views data respoistory and detect and flag suspicious/ hijacked routes. This uses the *longest matching prefix* method.
 
-# In[45]:
+# In[7]:
 
 
 import argparse
 import ipaddress
+import json
 from pathlib import Path
 import pandas as pd
-from mrtparse import Reader
 
 
-# In[68]:
+# In[8]:
 
 
-def extract_as_path(path):
-    as_path=[]
-    for attr in path:
-        attr_type=list(attr["type"].values())[0]
-        if attr_type != "AS_PATH":
-            continue
-        for segment in attr["value"]:
-            seg = list(segment["type"].values())[0]
-            if seg in {"AS_SEQUENCE","AS_SET"}:
-                as_path.extend(str(x) for x in segment["value"])
-    return as_path
-
-
-# In[69]:
-
-
-def parse_bgp_file(file_path):
+def parse_txt_file(file_path):
     rows=[]
-    for entry in Reader(str(file_path)):
-        if getattr(entry,"err",None):
-            continue
-        data=entry.data
-        mrt_type= list(data["type"].values())[0]
-        ts_unix = next(iter(data["timestamp"].keys()))
-        timestamp = data["timestamp"][ts_unix]
-        if mrt_type=="TABLE_DUMP_V2":
-            subtype=list(data["subtype"].values())[0]
-            if subtype=="PEER_INDEX_TABLE":
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line=line.strip()
+            if not line:
                 continue
-            if not subtype.startswith("RIB_IPV4"):
-                continue
-            prefix = f'{data["prefix"]}/{data["length"]}'
-            for rib_entry in data["rib_entries"]:
-                as_path = extract_as_path(rib_entry["path_attributes"])
-                if not as_path:
-                    continue
-                rows.append({
-                    "collector":file_path.parent.name,
-                    "source_file":file_path.name,
-                    "timestamp":timestamp,
-                    "timestamp_unix":ts_unix,
-                    "record_type":"RIB",
-                    "action":"A",
-                    "peer_as": None,
-                    "peer_ip": None,
-                    "prefix": prefix,
-                    "as_path": as_path,
-                    "origin_as": as_path[-1],
-                })
-        elif mrt_type=="BGP4MP":
-            msg=data.get("bgp_message",{})
-            if not msg:
-                continue
-            if list(msg["type"].values())[0]!="UPDATE":
-                continue
-            peer_as=str(data["peer_as"])
-            peer_ip=data["peer_ip"]
-            as_path=extract_as_path(msg.get("path_attributes", []))
-            origin_as=as_path[-1] if as_path else None
-
-            for nlri in msg.get("nlri", []):
-                prefix = f'{nlri["prefix"]}/{nlri["length"]}'
-                rows.append({
-                    "collector":file_path.parent.name,
-                    "source_file":file_path.name,
-                    "timestamp":timestamp,
-                    "timestamp_unix":ts_unix,
-                    "record_type":"UPDATE",
-                    "action":"A",
-                    "peer_as": peer_as,
-                    "peer_ip": peer_ip,
-                    "prefix": prefix,
-                    "as_path": as_path,
-                    "origin_as": origin_as,
-                })
+            rows.append(json.loads(line))
     return rows
 
 
-# In[72]:
+# In[9]:
 
 
 def detect_hijacks(data):
     root = Path(data)
-    collectors = [d for d in [root / "route-views", root / "ripe-ris"] if d.exists()]
+    txt_dir = root / "txt_files"
     rib_files = []
     update_files = []
 
-    for collector in collectors:
-        for f in sorted(collector.rglob("*.mrt")):
-            name=f.name.lower()
-            if "rib" in name or "bview" in name:
-                rib_files.append(f)
-            elif "update" in name:
-                update_files.append(f)
+    for f in sorted(txt_dir.rglob("*.txt")):
+        name=f.name.lower()
+        if "rib" in name or "bview" in name:
+            rib_files.append(f)
+        elif "update" in name:
+            update_files.append(f)
+
 
     baseline_exact={}
     baseline_mode=None
@@ -120,16 +53,17 @@ def detect_hijacks(data):
         baseline_mode = "RIB"
         earliest_rib_per_collector = {}
         for f in rib_files:
-            c=f.parent.name
+            parts = f.stem.split(".")
+            c = parts[0] if parts else f.stem
             earliest_rib_per_collector.setdefault(c,[]).append(f)
         baseline_files=[sorted(v)[0] for v in earliest_rib_per_collector.values()]
         for f in baseline_files:
-            for rec in parse_bgp_file(f):
+            for rec in parse_txt_file(f):
                 baseline_exact.setdefault(rec["prefix"], set()).add(rec["origin_as"])
     else:
         baseline_mode ="FIRST_UPDATE"
         for f in sorted(update_files):
-            for rec in parse_bgp_file(f):
+            for rec in parse_txt_file(f):
                 if rec["action"]!="A" or not rec["origin_as"]:
                     continue
                 if rec["prefix"] not in baseline_exact:
@@ -142,7 +76,7 @@ def detect_hijacks(data):
 
     suspicious_rows=[]
     for f in sorted(update_files):
-        for rec in parse_bgp_file(f):
+        for rec in parse_txt_file(f):
             if rec["action"]!="A" or not rec["origin_as"]:
                 continue
             prefix=rec["prefix"]
@@ -154,7 +88,6 @@ def detect_hijacks(data):
             victim_origins=[]
             flag=False
 
-            
             parent_match=None
             for plen in range(net.prefixlen - 1, max(net.prefixlen - 8, 0), -1):
                 parent=net.supernet(new_prefix=plen)
@@ -215,7 +148,6 @@ def detect_hijacks(data):
                 suspected_origins=("origin_as", lambda s: sorted(set(s))),
                 victim_origin_asns=("victim_origin_asns", lambda s: sorted(set(tuple(x) for x in s))),
                 collectors=("collector", lambda s: sorted(set(s))),
-
             )
             .sort_values(["suspicious_announcements", "prefix"], ascending=[False, True])
             .reset_index(drop=True)
@@ -229,15 +161,32 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="BGP hijack detector.")
     parser.add_argument("data_dir", help="Path to data directory (e.g. ./data/pakistan_youtube_2008)")
     args = parser.parse_args()
+# In[10]:
 
-    count, prefix_summary, suspicious_df = detect_hijacks(args.data_dir)
 
-    print("Project Detection:")
-    print("Suspicious announcement count:", count)
-    print("\nPossible hijacked prefixes/subprefixes")
-    print(prefix_summary.head(25).to_string())
-    print("\nSuspicious announcements")
-    print(suspicious_df.head(25).to_string())
+data = "pakistan_youtube_2008"
+
+count,prefix_summary, suspicious_df=detect_hijacks(data)
+
+print("Project Detection:")
+print("Suspicious announcement count:",count)
+
+
+# In[11]:
+
+
+print("Possible hijacked prefixes/subprefixes")
+prefix_summary.head(25)
+
+
+# In[12]:
+
+
+print("Suspicious announcements")
+suspicious_df.head(25)
+
+
+# In[ ]:
 
 
 
