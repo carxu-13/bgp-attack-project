@@ -2,6 +2,12 @@
 
 Final project for CS 6501 (Network Security and Privacy)
 
+# Data
+The data can be found either on [Box](https://virginia.box.com/s/iopub0m8k63gat60ba82lzdpdv4te3i1) or by running 
+``` 
+python isolate_bgp_data.py
+```
+
 # Lean4 Usage
 
 First, install `lean4` and `lake`. Then run the following command from the root of the repo.
